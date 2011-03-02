@@ -175,6 +175,11 @@ static const NSString* kRKModelMapperMappingFormatParserKey = @"RKMappingFormatP
 
 // TODO: Should accept RKObjectMappable instead of id...
 - (void)mapObject:(id)model fromDictionary:(NSDictionary*)dictionary {
+	NSLog(@"%s", __func__);
+	NSLog(@"%s: dictionary=%@", __func__, dictionary);
+	NSLog(@"%s: model=%@", __func__, model);
+	
+	
 	Class class = [model class];
 	
 	NSArray* elementNames = [_elementToClassMappings allKeysForObject:class];
@@ -362,6 +367,11 @@ static const NSString* kRKModelMapperMappingFormatParserKey = @"RKMappingFormatP
 }
 
 - (void)setRelationshipsOfModel:(id)object fromElements:(NSDictionary*)elements {
+	NSLog(@"%s", __func__);
+	NSLog(@"%s: object=%@", __func__, object);
+	NSLog(@"%s: elements=%@", __func__, elements);
+	
+	
 	NSDictionary* elementToRelationshipMappings = [[object class] elementToRelationshipMappings];
 	for (NSString* elementKeyPath in elementToRelationshipMappings) {
 		NSString* propertyName = [elementToRelationshipMappings objectForKey:elementKeyPath];
@@ -430,6 +440,11 @@ static const NSString* kRKModelMapperMappingFormatParserKey = @"RKMappingFormatP
 }
 
 - (void)updateModel:(id)model fromElements:(NSDictionary*)elements {
+	NSLog(@"%s", __func__);
+	NSLog(@"%s: model=%@", __func__, model);
+	NSLog(@"%s: elements=%@", __func__, elements);
+	
+	
 	[self setPropertiesOfModel:model fromElements:elements];
 	[self setRelationshipsOfModel:model fromElements:elements];
 }
