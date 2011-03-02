@@ -75,16 +75,22 @@
 #pragma mark RKRouter
 
 - (NSString*)resourcePathForObject:(NSObject<RKObjectMappable>*)object method:(RKRequestMethod)method {
+	NSLog(@"%s: object=%@", __func__, object);
+	NSLog(@"%s: method=%@", __func__, method);
+	
 	NSString* methodName = [self HTTPVerbForMethod:method];
 	NSString* className  = NSStringFromClass([object class]);
 	NSDictionary* classRoutes = [_routes objectForKey:className];
 	
 	NSString* resourcePath = nil;
 	if (resourcePath = [classRoutes objectForKey:methodName]) {
+		NSLog(@"%s: resourcePath=%@ for method=%@", __func__, resourcePath, methodName);
+		
 		return RKMakePathWithObject(resourcePath, object);
 	}
 	
 	if (resourcePath = [classRoutes objectForKey:@"ANY"]) {
+		NSLog(@"%s: resourcePath=%@ for ANY", __func__, resourcePath);
 		return RKMakePathWithObject(resourcePath, object);
 	}
 	

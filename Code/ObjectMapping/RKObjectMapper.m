@@ -126,6 +126,11 @@ static const NSString* kRKModelMapperMappingFormatParserKey = @"RKMappingFormatP
 
 // Primary entry point for RKObjectLoader
 - (id)mapFromString:(NSString*)string toClass:(Class)class keyPath:(NSString*)keyPath {
+	NSLog(@"%s: string=%@", __func__, string);
+	NSLog(@"%s: class=%@", __func__, class);
+	NSLog(@"%s: keyPath=%@", __func__, keyPath);
+	
+	
 	id object = [self parseString:string];
 	if (keyPath) {
 		object = [object valueForKeyPath:keyPath];
@@ -154,10 +159,14 @@ static const NSString* kRKModelMapperMappingFormatParserKey = @"RKMappingFormatP
 }
 
 - (id)mapFromString:(NSString*)string {
+	NSLog(@"%s", __func__);
 	return [self mapFromString:string toClass:nil keyPath:nil];
 }
 
 - (void)mapObject:(id)model fromString:(NSString*)string {
+	NSLog(@"%s: model=%@", __func__, model);
+	NSLog(@"%s: string=%@", __func__, string);
+	
 	id object = [self parseString:string];
 	if ([object isKindOfClass:[NSDictionary class]]) {
 		[self mapObject:model fromDictionary:object];
@@ -366,77 +375,84 @@ static const NSString* kRKModelMapperMappingFormatParserKey = @"RKMappingFormatP
 	}
 }
 
-- (void)setRelationshipsOfModel:(id)object fromElements:(NSDictionary*)elements {
-	NSLog(@"%s", __func__);
-	NSLog(@"%s: object=%@", __func__, object);
-	NSLog(@"%s: elements=%@", __func__, elements);
-	
-	
-	NSDictionary* elementToRelationshipMappings = [[object class] elementToRelationshipMappings];
-	for (NSString* elementKeyPath in elementToRelationshipMappings) {
-		NSString* propertyName = [elementToRelationshipMappings objectForKey:elementKeyPath];
-		
-		id relationshipElements = nil;
-		@try {
-			relationshipElements = [elements valueForKeyPath:elementKeyPath];
-		}
-		@catch (NSException* e) {
-			NSLog(@"Caught exception:%@ when trying valueForKeyPath with path:%@ for elements:%@", e, elementKeyPath, elements);
-		}
-		
-        // TODO: Need to send NSSet or NSArray depending on what the property type is...
-        Class collectionClass = [self typeClassForProperty:propertyName ofClass:[object class]];
-//		if ([relationshipElements isKindOfClass:[NSArray class]] || [relationshipElements isKindOfClass:[NSSet class]]) {
-        if ([collectionClass isSubclassOfClass:[NSSet class]] || [collectionClass isSubclassOfClass:[NSArray class]]) {
-			// NOTE: The last part of the keyPath contains the elementName for the mapped destination class of our children
-			NSArray* componentsOfKeyPath = [elementKeyPath componentsSeparatedByString:@"."];
-			Class class = [_elementToClassMappings objectForKey:[componentsOfKeyPath objectAtIndex:[componentsOfKeyPath count] - 1]];
-            id children = nil;
-            if ([collectionClass isSubclassOfClass:[NSSet class]]) {
-                children = [NSMutableSet setWithCapacity:[relationshipElements count]];
-            } else if ([collectionClass isSubclassOfClass:[NSArray class]]) {
-                children = [NSMutableArray arrayWithCapacity:[relationshipElements count]];
-            }
-            
-			for (NSDictionary* childElements in relationshipElements) {				
-				id child = [self createOrUpdateInstanceOfModelClass:class fromElements:childElements];		
-				if (child) {
-					[(NSMutableArray*)children addObject:child];
-				}
-			}
-			
-			[object setValue:children forKey:propertyName];
-		} else if ([relationshipElements isKindOfClass:[NSDictionary class]]) {
-			NSArray* componentsOfKeyPath = [elementKeyPath componentsSeparatedByString:@"."];
-			Class class = [_elementToClassMappings objectForKey:[componentsOfKeyPath objectAtIndex:[componentsOfKeyPath count] - 1]];
-			id child = [self createOrUpdateInstanceOfModelClass:class fromElements:relationshipElements];		
-			[object setValue:child forKey:propertyName];
-		}
-	}
-	
-	if ([object isKindOfClass:[RKManagedObject class]]) {
-		RKManagedObject* managedObject = (RKManagedObject*)object;
-		NSDictionary* relationshipToPkPropertyMappings = [[managedObject class] relationshipToPrimaryKeyPropertyMappings];
-		for (NSString* relationship in relationshipToPkPropertyMappings) {
-			NSString* primaryKeyPropertyString = [relationshipToPkPropertyMappings objectForKey:relationship];
-			
-			NSNumber* objectPrimaryKeyValue = nil;
-			@try {
-				objectPrimaryKeyValue = [managedObject valueForKeyPath:primaryKeyPropertyString];
-			} @catch (NSException* e) {
-				NSLog(@"Caught exception:%@ when trying valueForKeyPath with path:%@ for object:%@", e, primaryKeyPropertyString, managedObject);
-			}
-			
-			NSDictionary* relationshipsByName = [[managedObject entity] relationshipsByName];
-			NSEntityDescription* relationshipDestinationEntity = [[relationshipsByName objectForKey:relationship] destinationEntity];
-			id relationshipDestinationClass = objc_getClass([[relationshipDestinationEntity managedObjectClassName] cStringUsingEncoding:NSUTF8StringEncoding]);
-			RKManagedObject* relationshipValue = [[[RKObjectManager sharedManager] objectStore] findOrCreateInstanceOfManagedObject:relationshipDestinationClass
-                                                                                                                withPrimaryKeyValue:objectPrimaryKeyValue];			
-			if (relationshipValue) {
-				[managedObject setValue:relationshipValue forKey:relationship];
-			}
-		}
-	}
+- (void)setRelationshipsOfModel:(id)object fromElements:(NSDictionary*)elements
+{
+        NSLog(@"%s", __func__);
+        NSLog(@"%s: object=%@", __func__, object);
+        NSLog(@"%s: elements=%@", __func__, elements);
+
+
+        NSDictionary* elementToRelationshipMappings = [[object class] elementToRelationshipMappings];
+        for (NSString* elementKeyPath in elementToRelationshipMappings) {
+                NSString* propertyName = [elementToRelationshipMappings objectForKey:elementKeyPath];
+
+                id relationshipElements = nil;
+                @try {
+                        relationshipElements = [elements valueForKeyPath:elementKeyPath];
+                }
+                @catch (NSException* e) {
+                        NSLog(@"Caught exception:%@ when trying valueForKeyPath with path:%@ for elements:%@", e, elementKeyPath, elements);
+                }
+
+                // TODO: Need to send NSSet or NSArray depending on what the property type is...
+                Class collectionClass = [self typeClassForProperty:propertyName ofClass:[object class]];
+                NSLog(@"%s: collectionClass=%@", __func__, collectionClass);
+                
+                if ([collectionClass isSubclassOfClass:[NSSet class]] || [collectionClass isSubclassOfClass:[NSArray class]]) {
+                        // NOTE: The last part of the keyPath contains the elementName for the mapped destination class of our children
+                        NSArray* componentsOfKeyPath = [elementKeyPath componentsSeparatedByString:@"."];
+                        NSString *className = [componentsOfKeyPath objectAtIndex:[componentsOfKeyPath count] - 1];
+                        NSLog(@"%s: className=%@", __func__, className);
+                        
+                        Class class = [_elementToClassMappings objectForKey:className];
+                        NSLog(@"%s: found mapping class=%@", __func__, class);
+                        
+                        id children = nil;
+                        if ([collectionClass isSubclassOfClass:[NSSet class]]) {
+                              children = [NSMutableSet setWithCapacity:[relationshipElements count]];
+                        } else if ([collectionClass isSubclassOfClass:[NSArray class]]) {
+                                 children = [NSMutableArray arrayWithCapacity:[relationshipElements count]];
+                        }
+
+                        for (NSDictionary* childElements in relationshipElements) {                             
+                                id child = [self createOrUpdateInstanceOfModelClass:class fromElements:childElements];          
+                                if (child) {
+                                        [(NSMutableArray*)children addObject:child];
+                                }
+                        }
+
+                        [object setValue:children forKey:propertyName];
+                } else if ([relationshipElements isKindOfClass:[NSDictionary class]]) {
+                        NSArray* componentsOfKeyPath = [elementKeyPath componentsSeparatedByString:@"."];
+                        Class class = [_elementToClassMappings objectForKey:[componentsOfKeyPath objectAtIndex:[componentsOfKeyPath count] - 1]];
+                        id child = [self createOrUpdateInstanceOfModelClass:class fromElements:relationshipElements];           
+                        [object setValue:child forKey:propertyName];
+                }
+        }
+
+        if ([object isKindOfClass:[RKManagedObject class]]) {
+                RKManagedObject* managedObject = (RKManagedObject*)object;
+                NSDictionary* relationshipToPkPropertyMappings = [[managedObject class] relationshipToPrimaryKeyPropertyMappings];
+                for (NSString* relationship in relationshipToPkPropertyMappings) {
+                        NSString* primaryKeyPropertyString = [relationshipToPkPropertyMappings objectForKey:relationship];
+
+                        NSNumber* objectPrimaryKeyValue = nil;
+                        @try {
+                                objectPrimaryKeyValue = [managedObject valueForKeyPath:primaryKeyPropertyString];
+                        } @catch (NSException* e) {
+                                NSLog(@"Caught exception:%@ when trying valueForKeyPath with path:%@ for object:%@", e, primaryKeyPropertyString, managedObject);
+                        }
+
+                        NSDictionary* relationshipsByName = [[managedObject entity] relationshipsByName];
+                        NSEntityDescription* relationshipDestinationEntity = [[relationshipsByName objectForKey:relationship] destinationEntity];
+                        id relationshipDestinationClass = objc_getClass([[relationshipDestinationEntity managedObjectClassName] cStringUsingEncoding:NSUTF8StringEncoding]);
+                        RKManagedObject* relationshipValue = [[[RKObjectManager sharedManager] objectStore] findOrCreateInstanceOfManagedObject:relationshipDestinationClass
+                                                                                                                            withPrimaryKeyValue:objectPrimaryKeyValue];                 
+                        if (relationshipValue) {
+                                [managedObject setValue:relationshipValue forKey:relationship];
+                        }
+                }
+        }
 }
 
 - (void)updateModel:(id)model fromElements:(NSDictionary*)elements {
